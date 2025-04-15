@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/tooltip"
 import { MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/lib/config"
 import { cn } from "@/lib/utils"
-import { CaretDown, Image } from "@phosphor-icons/react"
+import { CaretDown, Image, Lock } from "@phosphor-icons/react"
+import { useFeatureGate } from "@/app/hooks/use-feature-gate"
 
 type ModelSelectorProps = {
   selectedModelId: string
@@ -32,6 +33,7 @@ export function ModelSelector({
   const provider = PROVIDERS_OPTIONS.find(
     (provider) => provider.id === model?.provider
   )
+  const { canSelectModel } = useFeatureGate()
 
   return (
     <TooltipProvider>
@@ -69,37 +71,51 @@ export function ModelSelector({
             const hasFileUpload = model.features?.find(
               (feature) => feature.id === "file-upload"
             )?.enabled
+            const canSelect = canSelectModel(model.id)
 
             return (
-              <DropdownMenuItem
-                key={model.id}
-                className={cn(
-                  "flex items-center justify-between px-3 py-2",
-                  !model.available && "cursor-not-allowed opacity-50",
-                  selectedModelId === model.id && "bg-accent"
+              <Tooltip key={model.id}>
+                <TooltipTrigger asChild>
+                  <DropdownMenuItem
+                    className={cn(
+                      "flex items-center justify-between px-3 py-2",
+                      (!model.available || !canSelect) && "cursor-not-allowed opacity-50",
+                      selectedModelId === model.id && "bg-accent"
+                    )}
+                    disabled={!model.available || !canSelect}
+                    onClick={() =>
+                      model.available && canSelect && setSelectedModelId(model.id)
+                    }
+                  >
+                    <div className="flex items-center gap-3">
+                      {provider?.icon && <provider.icon className="size-5" />}
+                      <span className="text-base">{model.name}</span>
+                      {!canSelect && (
+                        <Lock className="ml-2 size-4 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {hasFileUpload && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="cursor-help rounded-full bg-blue-100 p-1 text-blue-600 dark:bg-blue-900">
+                              <Image className="h-4 w-4" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="left">
+                            <p>This model can process and understand images.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                  </DropdownMenuItem>
+                </TooltipTrigger>
+                {!canSelect && (
+                  <TooltipContent side="right">
+                    <span>Sign in to select this model</span>
+                  </TooltipContent>
                 )}
-                disabled={!model.available}
-                onClick={() => model.available && setSelectedModelId(model.id)}
-              >
-                <div className="flex items-center gap-3">
-                  {provider?.icon && <provider.icon className="size-5" />}
-                  <span className="text-base">{model.name}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {hasFileUpload && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="cursor-help rounded-full bg-blue-100 p-1 text-blue-600 dark:bg-blue-900">
-                          <Image className="h-4 w-4" />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side="left">
-                        <p>This model can process and understand images.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                </div>
-              </DropdownMenuItem>
+              </Tooltip>
             )
           })}
         </DropdownMenuContent>

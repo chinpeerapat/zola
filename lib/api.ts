@@ -281,3 +281,58 @@ export async function signInWithGoogle(supabase: SupabaseClient) {
     throw err
   }
 }
+
+/**
+ * Signs up a new user with email and password via Supabase
+ */
+export async function signUpWithPassword(
+  supabase: SupabaseClient,
+  email: string,
+  password: string
+) {
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${
+          typeof window !== "undefined" ? window.location.origin : APP_DOMAIN
+        }/auth/callback`,
+      },
+    })
+
+    if (error) {
+      throw error
+    }
+
+    return data
+  } catch (err) {
+    console.error("Error signing up with password:", err)
+    throw err
+  }
+}
+
+/**
+ * Signs in user with email and password via Supabase
+ */
+export async function signInWithPassword(
+  supabase: SupabaseClient,
+  email: string,
+  password: string
+) {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (error) {
+      throw error
+    }
+
+    return data
+  } catch (err) {
+    console.error("Error signing in with password:", err)
+    throw err
+  }
+}
