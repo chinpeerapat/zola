@@ -56,10 +56,16 @@ export function Header() {
             />
             <AgentLink />
             <Link
-              href="/auth"
+              href="/auth/login"
               className="font-base text-muted-foreground hover:text-foreground text-base transition-colors"
             >
               Login
+            </Link>
+            <Link
+              href="/auth/signup"
+              className="font-base bg-foreground text-background hover:bg-foreground/90 px-3 py-1 rounded-md text-sm transition-colors"
+            >
+              Sign up
             </Link>
           </div>
         ) : (

@@ -1,6 +1,9 @@
-import { UserProfile } from "@/app/types/user"
-import { APP_DOMAIN, DAILY_SPECIAL_AGENT_LIMIT } from "@/lib/config"
+import { APP_DOMAIN } from "@/lib/config"
 import { SupabaseClient } from "@supabase/supabase-js"
+import {
+  AUTH_DAILY_MESSAGE_LIMIT,
+  NON_AUTH_DAILY_MESSAGE_LIMIT,
+} from "./config"
 import { fetchClient } from "./fetch"
 import { API_ROUTE_CREATE_GUEST, API_ROUTE_UPDATE_CHAT_MODEL } from "./routes"
 
@@ -35,6 +38,148 @@ export class UsageLimitError extends Error {
     super(message)
     this.code = "DAILY_LIMIT_REACHED"
   }
+}
+
+/**
+ * Checks the user's daily usage to see if they've reached their limit.
+ * Uses the `anonymous` flag from the user record to decide which daily limit applies.
+ *
+ * @param supabase - Your Supabase client.
+ * @param userId - The ID of the user.
+ * @throws UsageLimitError if the daily limit is reached, or a generic Error if checking fails.
+ * @returns User data including message counts and reset date
+ */
+export async function checkUsage(supabase: SupabaseClient, userId: string) {
+  const { data: userData, error: userDataError } = await supabase
+    .from("users")
+    .select(
+      "message_count, daily_message_count, daily_reset, anonymous, premium"
+    )
+    .eq("id", userId)
+    .maybeSingle()
+
+  if (userDataError) {
+    throw new Error("Error fetchClienting user data: " + userDataError.message)
+  }
+  if (!userData) {
+    throw new Error("User record not found for id: " + userId)
+  }
+
+  // Decide which daily limit to use.
+  const isAnonymous = userData.anonymous
+  // (Assuming these are imported from your config)
+  const dailyLimit = isAnonymous
+    ? NON_AUTH_DAILY_MESSAGE_LIMIT
+    : AUTH_DAILY_MESSAGE_LIMIT
+
+  // Reset the daily counter if the day has changed (using UTC).
+  const now = new Date()
+  let dailyCount = userData.daily_message_count || 0
+  const lastReset = userData.daily_reset ? new Date(userData.daily_reset) : null
+
+  if (
+    !lastReset ||
+    now.getUTCFullYear() !== lastReset.getUTCFullYear() ||
+    now.getUTCMonth() !== lastReset.getUTCMonth() ||
+    now.getUTCDate() !== lastReset.getUTCDate()
+  ) {
+    dailyCount = 0
+    const { error: resetError } = await supabase
+      .from("users")
+      .update({ daily_message_count: 0, daily_reset: now.toISOString() })
+      .eq("id", userId)
+    if (resetError) {
+      throw new Error("Failed to reset daily count: " + resetError.message)
+    }
+  }
+
+  // Check if the daily limit is reached.
+  if (dailyCount >= dailyLimit) {
+    throw new UsageLimitError("Daily message limit reached.")
+  }
+
+  return {
+    userData,
+    dailyCount,
+    dailyLimit,
+  }
+}
+
+/**
+ * Increments both overall and daily message counters for a user.
+ *
+ * @param supabase - Your Supabase client.
+ * @param userId - The ID of the user.
+ * @param currentCounts - Current message counts (optional, will be fetchCliented if not provided)
+ * @throws Error if updating fails.
+ */
+export async function incrementUsage(
+  supabase: SupabaseClient,
+  userId: string,
+  currentCounts?: { messageCount: number; dailyCount: number }
+): Promise<void> {
+  let messageCount: number
+  let dailyCount: number
+
+  if (currentCounts) {
+    messageCount = currentCounts.messageCount
+    dailyCount = currentCounts.dailyCount
+  } else {
+    // If counts weren't provided, fetchClient them
+    const { data: userData, error: userDataError } = await supabase
+      .from("users")
+      .select("message_count, daily_message_count")
+      .eq("id", userId)
+      .maybeSingle()
+
+    if (userDataError || !userData) {
+      throw new Error(
+        "Error fetchClienting user data: " +
+          (userDataError?.message || "User not found")
+      )
+    }
+
+    messageCount = userData.message_count || 0
+    dailyCount = userData.daily_message_count || 0
+  }
+
+  // Increment both overall and daily message counts.
+  const newOverallCount = messageCount + 1
+  const newDailyCount = dailyCount + 1
+
+  const { error: updateError } = await supabase
+    .from("users")
+    .update({
+      message_count: newOverallCount,
+      daily_message_count: newDailyCount,
+      last_active_at: new Date().toISOString(),
+    })
+    .eq("id", userId)
+
+  if (updateError) {
+    throw new Error("Failed to update usage data: " + updateError.message)
+  }
+}
+
+/**
+ * Checks the user's daily usage and increments both overall and daily counters.
+ * Resets the daily counter if a new day (UTC) is detected.
+ * Uses the `anonymous` flag from the user record to decide which daily limit applies.
+ *
+ * @param supabase - Your Supabase client.
+ * @param userId - The ID of the user.
+ * @throws UsageLimitError if the daily limit is reached, or a generic Error if updating fails.
+ */
+export async function checkAndIncrementUsage(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<void> {
+  const { userData, dailyCount } = await checkUsage(supabase, userId)
+
+  await incrementUsage(supabase, userId, {
+    messageCount: userData.message_count || 0,
+    dailyCount,
+  })
 }
 
 /**
@@ -137,121 +282,80 @@ export async function signInWithGoogle(supabase: SupabaseClient) {
   }
 }
 
-export const getOrCreateGuestUserId = async (
+/**
+ * Signs up a new user with email and password via Supabase
+ */
+export async function signUpWithPassword(
+  supabase: SupabaseClient,
+  email: string,
+  password: string
+) {
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${
+          typeof window !== "undefined" ? window.location.origin : APP_DOMAIN
+        }/auth/callback`,
+      },
+    })
+
+    if (error) {
+      throw error
+    }
+
+    return data
+  } catch (err) {
+    console.error("Error signing up with password:", err)
+    throw err
+  }
+}
+
+/**
+ * Signs in user with email and password via Supabase
+ */
+export async function signInWithPassword(
+  supabase: SupabaseClient,
+  email: string,
+  password: string
+) {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (error) {
+      throw error
+    }
+
+    return data
+  } catch (err) {
+    console.error("Error signing in with password:", err)
+    throw err
+  }
+}
+// -----------------------------------------------------------------------------
+// Guest user helper: returns authenticated user ID or generates/creates a guest user
+/**
+ * Gets the current user ID or, for anonymous users, generates and persists a guest ID
+ * and creates a corresponding guest user record on the server.
+ */
+export async function getOrCreateGuestUserId(
   user: UserProfile | null
-): Promise<string | null> => {
+): Promise<string | null> {
+  // Authenticated user: return their ID directly
   if (user?.id) return user.id
 
+  // Check for existing guest ID in localStorage
   const stored = localStorage.getItem("guestId")
   if (stored) return stored
 
+  // Create a new guest ID and persist it
   const guestId = crypto.randomUUID()
   localStorage.setItem("guestId", guestId)
+  // Notify server to create guest user record
   await createGuestUser(guestId)
   return guestId
-}
-
-export class SpecialAgentLimitError extends Error {
-  code: string
-  constructor(message: string = "Special agent usage limit reached.") {
-    super(message)
-    this.code = "SPECIAL_AGENT_LIMIT_REACHED"
-  }
-}
-
-export async function checkSpecialAgentUsage(
-  supabase: SupabaseClient,
-  userId: string
-) {
-  const { data: user, error } = await supabase
-    .from("users")
-    .select("special_agent_count, special_agent_reset, premium")
-    .eq("id", userId)
-    .maybeSingle()
-
-  if (error) {
-    throw new Error("Failed to fetch user data: " + error.message)
-  }
-  if (!user) {
-    throw new Error("User not found")
-  }
-
-  const now = new Date()
-  const lastReset = user.special_agent_reset
-    ? new Date(user.special_agent_reset)
-    : null
-  let usageCount = user.special_agent_count || 0
-
-  const isNewDay =
-    !lastReset ||
-    now.getUTCFullYear() !== lastReset.getUTCFullYear() ||
-    now.getUTCMonth() !== lastReset.getUTCMonth() ||
-    now.getUTCDate() !== lastReset.getUTCDate()
-
-  if (isNewDay) {
-    usageCount = 0
-    const { error: resetError } = await supabase
-      .from("users")
-      .update({
-        special_agent_count: 0,
-        special_agent_reset: now.toISOString(),
-      })
-      .eq("id", userId)
-    if (resetError) {
-      throw new Error(
-        "Failed to reset special agent count: " + resetError.message
-      )
-    }
-  }
-
-  if (usageCount >= DAILY_SPECIAL_AGENT_LIMIT) {
-    const err = new SpecialAgentLimitError()
-    throw err
-  }
-
-  return {
-    usageCount,
-    limit: DAILY_SPECIAL_AGENT_LIMIT,
-  }
-}
-
-export async function incrementSpecialAgentUsage(
-  supabase: SupabaseClient,
-  userId: string,
-  currentCount?: number
-): Promise<void> {
-  let specialAgentCount: number
-
-  if (typeof currentCount === "number") {
-    specialAgentCount = currentCount
-  } else {
-    const { data, error } = await supabase
-      .from("users")
-      .select("special_agent_count")
-      .eq("id", userId)
-      .maybeSingle()
-
-    if (error || !data) {
-      throw new Error(
-        "Failed to fetch special agent count: " +
-          (error?.message || "Not found")
-      )
-    }
-
-    specialAgentCount = data.special_agent_count || 0
-  }
-
-  const { error: updateError } = await supabase
-    .from("users")
-    .update({
-      special_agent_count: specialAgentCount + 1,
-      last_active_at: new Date().toISOString(),
-    })
-    .eq("id", userId)
-
-  if (updateError) {
-    throw new Error(
-      "Failed to increment special agent count: " + updateError.message
-    )
-  }
 }
