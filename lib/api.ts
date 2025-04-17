@@ -336,3 +336,26 @@ export async function signInWithPassword(
     throw err
   }
 }
+// -----------------------------------------------------------------------------
+// Guest user helper: returns authenticated user ID or generates/creates a guest user
+/**
+ * Gets the current user ID or, for anonymous users, generates and persists a guest ID
+ * and creates a corresponding guest user record on the server.
+ */
+export async function getOrCreateGuestUserId(
+  user: UserProfile | null
+): Promise<string | null> {
+  // Authenticated user: return their ID directly
+  if (user?.id) return user.id
+
+  // Check for existing guest ID in localStorage
+  const stored = localStorage.getItem("guestId")
+  if (stored) return stored
+
+  // Create a new guest ID and persist it
+  const guestId = crypto.randomUUID()
+  localStorage.setItem("guestId", guestId)
+  // Notify server to create guest user record
+  await createGuestUser(guestId)
+  return guestId
+}
