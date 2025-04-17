@@ -33,6 +33,8 @@ type ChatInputProps = {
   systemPrompt?: string
   stop: () => void
   status?: "submitted" | "streaming" | "ready" | "error"
+  setSelectedAgentId: (agentId: string | null) => void
+  selectedAgentId: string | null
 }
 
 export function ChatInput({
@@ -49,16 +51,24 @@ export function ChatInput({
   selectedModel,
   isUserAuthenticated,
   onSelectSystemPrompt,
-  systemPrompt,
   stop,
   status,
+  setSelectedAgentId,
+  selectedAgentId,
 }: ChatInputProps) {
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (isSubmitting) return
+      if (isSubmitting) {
+        e.preventDefault()
+        return
+      }
+
+      if (e.key === "Enter" && status === "streaming") {
+        e.preventDefault()
+        return
+      }
 
       if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault()
         onSend()
       }
     },
@@ -66,11 +76,11 @@ export function ChatInput({
   )
 
   const handleMainClick = () => {
-    if (isSubmitting && status !== "streaming") {
+    if (isSubmitting) {
       return
     }
 
-    if (isSubmitting && status === "streaming") {
+    if (status === "streaming") {
       stop()
       return
     }
@@ -86,7 +96,8 @@ export function ChatInput({
           onValueChange={onValueChange}
           onSuggestion={onSuggestion}
           value={value}
-          systemPrompt={systemPrompt}
+          setSelectedAgentId={setSelectedAgentId}
+          selectedAgentId={selectedAgentId}
         />
       )}
       <div className="relative order-2 px-2 pb-3 sm:pb-4 md:order-1">
@@ -101,7 +112,6 @@ export function ChatInput({
             placeholder={`Ask ${APP_NAME}`}
             onKeyDown={handleKeyDown}
             className="mt-2 ml-2 min-h-[44px] text-base leading-[1.3] sm:text-base md:text-base"
-            disabled={isSubmitting}
           />
           <PromptInputActions className="mt-5 w-full justify-between px-2">
             <div className="flex gap-2">
@@ -116,14 +126,16 @@ export function ChatInput({
                 isUserAuthenticated={isUserAuthenticated}
               />
             </div>
-            <PromptInputAction tooltip={isSubmitting ? "Sending..." : "Send"}>
+            <PromptInputAction
+              tooltip={status === "streaming" ? "Stop" : "Send"}
+            >
               <Button
                 size="sm"
                 className="size-9 rounded-full transition-all duration-300 ease-out"
-                disabled={isSubmitting || (status !== "streaming" && !value)}
+                disabled={!value || isSubmitting}
                 type="button"
                 onClick={handleMainClick}
-                aria-label="Send message"
+                aria-label={status === "streaming" ? "Stop" : "Send message"}
               >
                 {status === "streaming" ? (
                   <Stop className="size-4" />
