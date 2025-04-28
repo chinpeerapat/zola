@@ -1,7 +1,7 @@
 import { ModelSelector } from "@/components/common/model-selector"
 import { FeatureGatePrompt } from "@/components/common/feature-gate-prompt"
 import { useFeatureGate } from "@/app/hooks/use-feature-gate"
-import { MODELS_OPTIONS, PROVIDERS_OPTIONS } from "../../../lib/config"
+// Removed unused model and provider lookups
 
 export type SelectModelProps = {
   selectedModel: string
@@ -13,10 +13,6 @@ export function SelectModel({
   onSelectModel,
 }: SelectModelProps) {
   const { canSelectModel } = useFeatureGate()
-  const model = MODELS_OPTIONS.find((model) => model.id === selectedModel)
-  const provider = PROVIDERS_OPTIONS.find(
-    (provider) => provider.id === model?.provider
-  )
 
   if (!canSelectModel(selectedModel)) {
     return <FeatureGatePrompt feature="select a model" />

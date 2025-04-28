@@ -155,13 +155,11 @@ export function ChatInput({
             <div className="flex gap-2">
               <ButtonFileUpload
                 onFileUpload={onFileUpload}
-                isUserAuthenticated={isUserAuthenticated}
                 model={selectedModel}
               />
               <SelectModel
                 selectedModel={selectedModel}
                 onSelectModel={onSelectModel}
-                isUserAuthenticated={isUserAuthenticated}
               />
             </div>
             <PromptInputAction

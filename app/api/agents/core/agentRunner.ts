@@ -39,7 +39,7 @@ export async function runAgent<T extends AgentOutput>(
       )
       supabase = result.supabase
       sanitizedPrompt = result.sanitizedPrompt
-    } catch (e) {
+    } catch (e: any) {
       if (e instanceof UsageLimitError || e instanceof SpecialAgentLimitError) {
         return jsonRes({ error: e.message, code: e.code }, 403)
       }

@@ -13,7 +13,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { MODELS_OPTIONS, PROVIDERS_OPTIONS } from "@/lib/config"
+import { MODELS_OPTIONS, PROVIDERS } from "@/lib/config"
 import { cn } from "@/lib/utils"
 import { CaretDown, Image, Lock } from "@phosphor-icons/react"
 import { useFeatureGate } from "@/app/hooks/use-feature-gate"
@@ -30,9 +30,7 @@ export function ModelSelector({
   className,
 }: ModelSelectorProps) {
   const model = MODELS_OPTIONS.find((model) => model.id === selectedModelId)
-  const provider = PROVIDERS_OPTIONS.find(
-    (provider) => provider.id === model?.provider
-  )
+  const provider = PROVIDERS.find((provider) => provider.id === model?.provider)
   const { canSelectModel } = useFeatureGate()
 
   return (
@@ -65,9 +63,7 @@ export function ModelSelector({
           </div>
 
           {MODELS_OPTIONS.map((model) => {
-            const provider = PROVIDERS_OPTIONS.find(
-              (provider) => provider.id === model.provider
-            )
+            const provider = PROVIDERS.find((provider) => provider.id === model.provider)
             const hasFileUpload = model.features?.find(
               (feature) => feature.id === "file-upload"
             )?.enabled
