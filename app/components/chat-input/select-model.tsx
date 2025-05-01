@@ -1,5 +1,4 @@
 import { ModelSelector } from "@/components/common/model-selector"
-import { FeatureGatePrompt } from "@/components/common/feature-gate-prompt"
 import { useFeatureGate } from "@/app/hooks/use-feature-gate"
 // Removed unused model and provider lookups
 
@@ -12,12 +11,10 @@ export function SelectModel({
   selectedModel,
   onSelectModel,
 }: SelectModelProps) {
+  // Users can pick models via the dropdown; model availability is enforced in the selector
   const { canSelectModel } = useFeatureGate()
 
-  if (!canSelectModel(selectedModel)) {
-    return <FeatureGatePrompt feature="select a model" />
-  }
-
+  return (
   return (
     <ModelSelector
       selectedModelId={selectedModel}

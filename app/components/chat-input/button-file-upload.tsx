@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { FileArrowUp, Paperclip } from "@phosphor-icons/react"
+import React, { useState } from "react"
 import { FeatureGatePrompt } from "@/components/common/feature-gate-prompt"
 import { useFeatureGate } from "@/app/hooks/use-feature-gate"
 
@@ -24,8 +25,11 @@ export function ButtonFileUpload({
   model,
 }: ButtonFileUploadProps) {
   const { canUploadFiles } = useFeatureGate()
+  const [showLogin, setShowLogin] = useState(false)
+  const isAllowed = canUploadFiles(model)
 
-  if (!canUploadFiles(model)) {
+  // Show login prompt when user attempts to upload without permission
+  if (showLogin) {
     return <FeatureGatePrompt feature="upload files" />
   }
 
@@ -46,12 +50,21 @@ export function ButtonFileUpload({
               )}
               type="button"
               aria-label="Add files"
+              onClick={(e) => {
+                if (!isAllowed) {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setShowLogin(true)
+                }
+              }}
             >
               <Paperclip className="size-4" />
             </Button>
           </FileUploadTrigger>
         </TooltipTrigger>
-        <TooltipContent>Add files</TooltipContent>
+        <TooltipContent>
+          {isAllowed ? "Add files" : "Sign in to upload files"}
+        </TooltipContent>
       </Tooltip>
       <FileUploadContent>
         <div className="border-input bg-background flex flex-col items-center rounded-lg border border-dashed p-8">

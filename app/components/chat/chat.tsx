@@ -202,6 +202,10 @@ export function Chat() {
   }
 
   const submit = async () => {
+    if (!isAuthenticated) {
+      setHasDialogAuth(true)
+      return
+    }
     setIsSubmitting(true)
 
     const uid = await getOrCreateGuestUserId(user)
@@ -303,6 +307,10 @@ export function Chat() {
 
   const handleSuggestion = useCallback(
     async (suggestion: string) => {
+      if (!isAuthenticated) {
+        setHasDialogAuth(true)
+        return
+      }
       setIsSubmitting(true)
       const optimisticId = `optimistic-${Date.now().toString()}`
       const optimisticMessage = {
