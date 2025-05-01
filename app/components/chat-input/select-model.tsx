@@ -12,9 +12,8 @@ export function SelectModel({
   onSelectModel,
 }: SelectModelProps) {
   // Users can pick models via the dropdown; model availability is enforced in the selector
-  const { canSelectModel } = useFeatureGate()
+  useFeatureGate()
 
-  return (
   return (
     <ModelSelector
       selectedModelId={selectedModel}
