@@ -7,6 +7,7 @@ import {
   PaintBrush,
   Sparkle,
 } from "@phosphor-icons/react/dist/ssr"
+import { STATIC_MODELS } from "@/lib/models"
 
 export const NON_AUTH_DAILY_MESSAGE_LIMIT = 5
 export const AUTH_DAILY_MESSAGE_LIMIT = 1000
@@ -22,6 +23,15 @@ export const FREE_MODELS_IDS = [
   "mistral-large-latest",
   "gpt-4.1-nano",
 ]
+
+// Export model arrays for usage tracking
+export const MODELS_FREE = STATIC_MODELS.filter(
+  (model) => FREE_MODELS_IDS.includes(model.id) || model.providerId === "ollama"
+)
+
+export const MODELS_PRO = STATIC_MODELS.filter(
+  (model) => !MODELS_FREE.some(freeModel => freeModel.id === model.id)
+)
 
 export const MODEL_DEFAULT = "gpt-4.1-nano"
 
@@ -117,7 +127,7 @@ export const SUGGESTIONS = [
   },
 ]
 
-export const SYSTEM_PROMPT_DEFAULT = `You are Zola, a thoughtful and clear assistant. Your tone is calm, minimal, and human. You write with intention—never too much, never too little. You avoid clichés, speak simply, and offer helpful, grounded answers. When needed, you ask good questions. You don’t try to impress—you aim to clarify. You may use metaphors if they bring clarity, but you stay sharp and sincere. You're here to help the user think clearly and move forward, not to overwhelm or overperform.`
+export const SYSTEM_PROMPT_DEFAULT = `You are Zola, a thoughtful and clear assistant. Your tone is calm, minimal, and human. You write with intention—never too much, never too little. You avoid clichés, speak simply, and offer helpful, grounded answers. When needed, you ask good questions. You don't try to impress—you aim to clarify. You may use metaphors if they bring clarity, but you stay sharp and sincere. You're here to help the user think clearly and move forward, not to overwhelm or overperform.`
 
 export const MESSAGE_MAX_LENGTH = 4000
 
