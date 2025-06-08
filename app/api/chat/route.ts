@@ -4,13 +4,14 @@ import { loadMCPToolsFromURL } from "@/lib/mcp/load-mcp-from-url"
 import { getAllModels } from "@/lib/models"
 import { getProviderForModel } from "@/lib/openproviders/provider-map"
 import { Provider } from "@/lib/user-keys"
+import { validateUserIdentity } from "@/lib/server/api"
+import { checkUsageByModel, enforceModelAccess, NotPremiumError } from "@/lib/usage"
 import { Attachment } from "@ai-sdk/ui-utils"
 import { Message as MessageAISDK, streamText, ToolSet } from "ai"
 import {
   logUserMessage,
   storeAssistantMessage,
   trackSpecialAgentUsage,
-  validateAndTrackUsage,
 } from "./api"
 import { cleanMessagesForTools } from "./utils"
 
@@ -45,11 +46,14 @@ export async function POST(req: Request) {
       )
     }
 
-    const supabase = await validateAndTrackUsage({
-      userId,
-      model,
-      isAuthenticated,
-    })
+    const supabase = await validateUserIdentity(userId, isAuthenticated)
+
+    if (supabase) {
+      // Enforce premium entitlement for pro models
+      await enforceModelAccess(supabase, userId, model)
+      // Check and increment usage caps
+      await checkUsageByModel(supabase, userId, model, isAuthenticated)
+    }
 
     const userMessage = messages[messages.length - 1]
 
@@ -150,6 +154,15 @@ export async function POST(req: Request) {
     })
   } catch (err: unknown) {
     console.error("Error in /api/chat:", err)
+    
+    // Handle premium access errors
+    if (err instanceof NotPremiumError) {
+      return new Response(
+        JSON.stringify({ error: err.message, code: err.code }),
+        { status: 402 }
+      )
+    }
+    
     // Return a structured error response if the error is a UsageLimitError.
     const error = err as { code?: string; message?: string }
     if (error.code === "DAILY_LIMIT_REACHED") {
