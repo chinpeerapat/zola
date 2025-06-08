@@ -2,13 +2,19 @@ import { UsageLimitError } from "@/lib/api"
 import {
   AUTH_DAILY_MESSAGE_LIMIT,
   DAILY_LIMIT_PRO_MODELS,
-  FREE_MODELS_IDS,
+  MODELS_FREE,
+  MODELS_PRO,
   NON_AUTH_DAILY_MESSAGE_LIMIT,
 } from "@/lib/config"
 import { SupabaseClient } from "@supabase/supabase-js"
 
-const isFreeModel = (modelId: string) => FREE_MODELS_IDS.includes(modelId)
-const isProModel = (modelId: string) => !isFreeModel(modelId)
+export function isProModel(modelId: string): boolean {
+  return MODELS_PRO.some((m) => m.id === modelId)
+}
+
+export function isFreeModel(modelId: string): boolean {
+  return MODELS_FREE.some((m) => m.id === modelId)
+}
 
 /**
  * Checks the user's daily usage to see if they've reached their limit.
@@ -91,6 +97,7 @@ export async function incrementUsage(
   supabase: SupabaseClient,
   userId: string
 ): Promise<void> {
+  // Fetch existing counts
   const { data: userData, error: userDataError } = await supabase
     .from("users")
     .select("message_count, daily_message_count")
@@ -205,17 +212,45 @@ export async function incrementProUsage(
   }
 }
 
+// Add premium access enforcement
+export class NotPremiumError extends Error {
+  code = "NOT_PREMIUM"
+  constructor(message = "Please upgrade to Premium to use this model.") {
+    super(message)
+  }
+}
+
+export async function enforceModelAccess(
+  supabase: SupabaseClient,
+  userId: string,
+  modelId: string
+): Promise<void> {
+  if (!isProModel(modelId)) return
+  const { data: u, error } = await supabase
+    .from("users")
+    .select("premium")
+    .eq("id", userId)
+    .maybeSingle()
+  if (error) throw new Error("Failed to fetch user data: " + error.message)
+  if (!u?.premium) {
+    throw new NotPremiumError()
+  }
+}
+
 export async function checkUsageByModel(
   supabase: SupabaseClient,
   userId: string,
   modelId: string,
   isAuthenticated: boolean
 ) {
+  // Always enforce premium for pro models
   if (isProModel(modelId)) {
     if (!isAuthenticated) {
       throw new UsageLimitError("You must log in to use this model.")
     }
-    return await checkProUsage(supabase, userId)
+    await enforceModelAccess(supabase, userId, modelId)
+    // Premium users have unlimited pro-model access
+    return
   }
 
   return await checkUsage(supabase, userId)
@@ -229,7 +264,8 @@ export async function incrementUsageByModel(
 ) {
   if (isProModel(modelId)) {
     if (!isAuthenticated) return
-    return await incrementProUsage(supabase, userId)
+    // Premium users: skip pro usage counting
+    return
   }
 
   return await incrementUsage(supabase, userId)

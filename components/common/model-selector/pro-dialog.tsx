@@ -66,18 +66,18 @@ export function ProModelDialog({
       </div>
 
       <div className="px-6 pt-4 text-center text-lg leading-tight font-medium">
-        This model is Pro-only on Zola
+        This model requires Premium access
       </div>
 
       <div className="flex-grow overflow-y-auto">
         <div className="px-6 py-4">
           <p className="text-muted-foreground text-sm">
-            Zola is free and open-source. Some models require self-hosted
-            access.
+            Zola is free and open-source, but this model is only available
+            to Premium subscribers.
           </p>
           <p className="text-muted-foreground mt-1 text-sm">
-            If you want to use this model, you can fork Zola and add your own
-            key. Or let us know you want access.
+            Upgrade your account to Premium to unlock this model, or fork Zola
+            and add your own key.
           </p>
 
           <div className="mt-5 flex justify-center gap-3">
@@ -92,7 +92,7 @@ export function ProModelDialog({
                   className="flex-1"
                   variant="default"
                 >
-                  I want this model
+                  Upgrade to Premium
                 </Button>
                 <Button variant="outline" className="flex-1" asChild>
                   <a
