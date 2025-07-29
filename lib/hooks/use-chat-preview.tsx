@@ -3,7 +3,6 @@ import {
   getCachedMessages,
   getMessagesFromDb,
 } from "@/lib/chat-store/messages/api"
-import { PERFORMANCE_CONFIG } from "@/lib/performance-config"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 interface ChatMessage {
@@ -122,7 +121,7 @@ export function useChatPreview(): UseChatPreviewReturn {
           setIsLoading(false)
         }
       }
-    }, PERFORMANCE_CONFIG.CHAT_PREVIEW_DEBOUNCE) // Use centralized debounce configuration
+    }, 200) // 200ms debounce to prevent rapid calls
   }, [])
 
   const clearPreview = useCallback(() => {

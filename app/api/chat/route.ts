@@ -1,7 +1,6 @@
 import { SYSTEM_PROMPT_DEFAULT } from "@/lib/config"
 import { getAllModels } from "@/lib/models"
 import { getProviderForModel } from "@/lib/openproviders/provider-map"
-import { PERFORMANCE_CONFIG, getStreamingConfig, PerformanceMonitor } from "@/lib/performance-config"
 import type { ProviderWithoutOllama } from "@/lib/user-keys"
 import { Attachment } from "@ai-sdk/ui-utils"
 import { Message as MessageAISDK, streamText, ToolSet } from "ai"
@@ -94,29 +93,18 @@ export async function POST(req: Request) {
 
     const apiKey: string | undefined = resolvedApiKey || undefined
 
-    // Start performance monitoring
-    PerformanceMonitor.start(`chat-${model}-${chatId}`)
-
-    const streamingConfig = getStreamingConfig()
     const result = streamText({
       model: modelConfig.apiSdk(apiKey, { enableSearch }),
       system: effectiveSystemPrompt,
       messages: messages,
       tools: {} as ToolSet,
-      ...streamingConfig,
+      maxSteps: 10,
       onError: (err: unknown) => {
         console.error("Streaming error occurred:", err)
-        PerformanceMonitor.end(`chat-${model}-${chatId}`)
         // Don't set streamError anymore - let the AI SDK handle it through the stream
       },
 
       onFinish: async ({ response }) => {
-        // End performance monitoring
-        const duration = PerformanceMonitor.end(`chat-${model}-${chatId}`)
-        if (duration && PERFORMANCE_CONFIG.ENABLE_PERFORMANCE_MODE) {
-          console.log(`✅ Chat response completed in ${duration}ms for model ${model}`)
-        }
-
         if (supabase) {
           await storeAssistantMessage({
             supabase,
