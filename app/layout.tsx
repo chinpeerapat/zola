@@ -26,9 +26,9 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "Zola",
+  title: "smolchat",
   description:
-    "Zola is the open-source interface for AI chat. Multi-model, BYOK-ready, and fully self-hostable. Use Claude, OpenAI, Gemini, local models, and more, all in one place.",
+    "smolchat is the open-source interface for AI chat. Multi-model, BYOK-ready, and fully self-hostable. Use Claude, OpenAI, Gemini, local models, and more, all in one place.",
 }
 
 export default async function RootLayout({
@@ -43,11 +43,18 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       {isOfficialDeployment ? (
-        <Script
-          defer
-          src="https://assets.onedollarstats.com/stonks.js"
-          {...(isDev ? { "data-debug": "zola.chat" } : {})}
-        />
+        <>
+          <Script
+            defer
+            src="https://assets.onedollarstats.com/stonks.js"
+            {...(isDev ? { "data-debug": "zola.chat" } : {})}
+          />
+          <Script
+            defer
+            src="https://cloud.umami.is/script.js"
+            data-website-id="b43d8533-ad95-4605-a8db-ce86c06d4d54"
+          />
+        </>
       ) : null}
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

@@ -53,13 +53,13 @@ export async function POST(req: Request) {
 
     // Increment message count for successful validation
     if (supabase) {
-      await incrementMessageCount({ supabase, userId })
+      incrementMessageCount({ supabase, userId }).catch(console.error)
     }
 
     const userMessage = messages[messages.length - 1]
 
     if (supabase && userMessage?.role === "user") {
-      await logUserMessage({
+      logUserMessage({
         supabase,
         userId,
         chatId,
@@ -68,10 +68,21 @@ export async function POST(req: Request) {
         model,
         isAuthenticated,
         message_group_id,
-      })
+      }).catch(console.error)
     }
 
-    const allModels = await getAllModels()
+    const provider = getProviderForModel(model)
+
+    const [allModels, resolvedApiKey] = await Promise.all([
+      getAllModels(),
+      isAuthenticated && userId
+        ? (async () => {
+            const { getEffectiveApiKey } = await import("@/lib/user-keys")
+            return getEffectiveApiKey(userId, provider as ProviderWithoutOllama)
+          })()
+        : Promise.resolve(undefined),
+    ])
+
     const modelConfig = allModels.find((m) => m.id === model)
 
     if (!modelConfig || !modelConfig.apiSdk) {
@@ -80,14 +91,7 @@ export async function POST(req: Request) {
 
     const effectiveSystemPrompt = systemPrompt || SYSTEM_PROMPT_DEFAULT
 
-    let apiKey: string | undefined
-    if (isAuthenticated && userId) {
-      const { getEffectiveApiKey } = await import("@/lib/user-keys")
-      const provider = getProviderForModel(model)
-      apiKey =
-        (await getEffectiveApiKey(userId, provider as ProviderWithoutOllama)) ||
-        undefined
-    }
+    const apiKey: string | undefined = resolvedApiKey || undefined
 
     const result = streamText({
       model: modelConfig.apiSdk(apiKey, { enableSearch }),

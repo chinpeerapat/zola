@@ -1,10 +1,10 @@
-# Zola
+# smolchat
 
-[zola.chat](https://zola.chat)
+[smolchat.chat](https://smolchat.chat)
 
-**Zola** is the open-source chat interface for all your models.
+**smolchat** is the open-source chat interface for all your models.
 
-![zola cover](./public/cover_zola.jpg)
+![smolchat cover](./public/cover_smolchat.jpg)
 
 ## Features
 
@@ -23,8 +23,8 @@
 ### Option 1: With OpenAI (Cloud)
 
 ```bash
-git clone https://github.com/ibelick/zola.git
-cd zola
+git clone https://github.com/ibelick/smolchat.git
+cd smolchat
 npm install
 echo "OPENAI_API_KEY=your-key" > .env.local
 npm run dev
@@ -37,24 +37,24 @@ npm run dev
 curl -fsSL https://ollama.ai/install.sh | sh
 ollama pull llama3.2  # or any model you prefer
 
-# Clone and run Zola
-git clone https://github.com/ibelick/zola.git
-cd zola
+# Clone and run smolchat
+git clone https://github.com/ibelick/smolchat.git
+cd smolchat
 npm install
 npm run dev
 ```
 
-Zola will automatically detect your local Ollama models!
+smolchat will automatically detect your local Ollama models!
 
 ### Option 3: Docker with Ollama
 
 ```bash
-git clone https://github.com/ibelick/zola.git
-cd zola
+git clone https://github.com/ibelick/smolchat.git
+cd smolchat
 docker-compose -f docker-compose.ollama.yml up
 ```
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ibelick/zola)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/ibelick/smolchat)
 
 To unlock features like auth, file uploads, see [INSTALL.md](./INSTALL.md).
 
