@@ -5,6 +5,7 @@ import { createOpenAI, openai } from "@ai-sdk/openai"
 import { createPerplexity, perplexity } from "@ai-sdk/perplexity"
 import type { LanguageModelV1 } from "@ai-sdk/provider"
 import { createXai, xai } from "@ai-sdk/xai"
+import { PERFORMANCE_CONFIG, getOptimizedFetchOptions } from "@/lib/performance-config"
 import { getProviderForModel } from "./provider-map"
 import type {
   AnthropicModel,
@@ -57,12 +58,19 @@ const getOllamaBaseURL = () => {
   )
 }
 
-// Create Ollama provider instance with configurable baseURL
+// Create Ollama provider instance with configurable baseURL and performance optimizations
 const createOllamaProvider = () => {
+  const ollamaFetchOptions = getOptimizedFetchOptions(PERFORMANCE_CONFIG.OLLAMA_REQUEST_TIMEOUT)
   return createOpenAI({
     baseURL: getOllamaBaseURL(),
     apiKey: "ollama", // Ollama doesn't require a real API key
     name: "ollama",
+    fetch: (url, options) => {
+       return fetch(url, {
+         ...options,
+         ...ollamaFetchOptions,
+       })
+     },
   })
 }
 
@@ -73,11 +81,20 @@ export function openproviders<T extends SupportedModel>(
 ): LanguageModelV1 {
   const provider = getProviderForModel(modelId)
 
+  // Performance optimizations: Use centralized configuration
+  const standardFetchOptions = getOptimizedFetchOptions()
+
   if (provider === "openai") {
     if (apiKey) {
       const openaiProvider = createOpenAI({
         apiKey,
         compatibility: "strict",
+        fetch: (url, options) => {
+          return fetch(url, {
+            ...options,
+            ...standardFetchOptions,
+          })
+        },
       })
       return openaiProvider(
         modelId as OpenAIModel,
@@ -89,7 +106,15 @@ export function openproviders<T extends SupportedModel>(
 
   if (provider === "mistral") {
     if (apiKey) {
-      const mistralProvider = createMistral({ apiKey })
+      const mistralProvider = createMistral({
+        apiKey,
+        fetch: (url, options) => {
+           return fetch(url, {
+             ...options,
+             ...standardFetchOptions,
+           })
+         },
+      })
       return mistralProvider(
         modelId as MistralModel,
         settings as MistralProviderSettings
@@ -100,7 +125,15 @@ export function openproviders<T extends SupportedModel>(
 
   if (provider === "google") {
     if (apiKey) {
-      const googleProvider = createGoogleGenerativeAI({ apiKey })
+      const googleProvider = createGoogleGenerativeAI({
+        apiKey,
+        fetch: (url, options) => {
+           return fetch(url, {
+             ...options,
+             ...standardFetchOptions,
+           })
+         },
+      })
       return googleProvider(
         modelId as GeminiModel,
         settings as GoogleGenerativeAIProviderSettings
@@ -114,7 +147,15 @@ export function openproviders<T extends SupportedModel>(
 
   if (provider === "perplexity") {
     if (apiKey) {
-      const perplexityProvider = createPerplexity({ apiKey })
+      const perplexityProvider = createPerplexity({
+        apiKey,
+        fetch: (url, options) => {
+           return fetch(url, {
+             ...options,
+             ...standardFetchOptions,
+           })
+         },
+      })
       return perplexityProvider(
         modelId as PerplexityModel
         // settings as PerplexityProviderSettings
@@ -128,7 +169,15 @@ export function openproviders<T extends SupportedModel>(
 
   if (provider === "anthropic") {
     if (apiKey) {
-      const anthropicProvider = createAnthropic({ apiKey })
+      const anthropicProvider = createAnthropic({
+        apiKey,
+        fetch: (url, options) => {
+           return fetch(url, {
+             ...options,
+             ...standardFetchOptions,
+           })
+         },
+      })
       return anthropicProvider(
         modelId as AnthropicModel,
         settings as AnthropicProviderSettings
@@ -142,7 +191,15 @@ export function openproviders<T extends SupportedModel>(
 
   if (provider === "xai") {
     if (apiKey) {
-      const xaiProvider = createXai({ apiKey })
+      const xaiProvider = createXai({
+        apiKey,
+        fetch: (url, options) => {
+          return fetch(url, {
+            ...options,
+            ...standardFetchOptions,
+          })
+        },
+      })
       return xaiProvider(modelId as XaiModel, settings as XaiProviderSettings)
     }
     return xai(modelId as XaiModel, settings as XaiProviderSettings)

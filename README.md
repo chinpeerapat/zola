@@ -72,6 +72,42 @@ To unlock features like auth, file uploads, see [INSTALL.md](./INSTALL.md).
   <img alt="Vercel OSS Program" src="https://vercel.com/oss/program-badge.svg" />
 </a>
 
+## Performance
+
+The application is optimized for performance with comprehensive improvements:
+
+### Core Optimizations
+- Server-side rendering with Next.js
+- Efficient state management
+- Optimized database queries
+- Streaming responses for real-time chat
+
+### AI Model Response Optimizations
+- **Centralized Performance Configuration**: All timeout and performance settings managed in `lib/performance-config.ts`
+- **Optimized Request Timeouts**: 30s for standard providers, 45s for Ollama (local models)
+- **HTTP Keep-Alive**: Enabled connection reuse for better performance
+- **AbortSignal Integration**: Proper request cancellation and timeout handling
+- **Performance Monitoring**: Built-in timing and logging for chat responses
+- **Streaming Optimizations**: Enhanced AI SDK configuration with `experimental_continueSteps`
+- **Debounce Optimization**: Reduced chat preview debounce to 100ms for better responsiveness
+
+### Environment Variables for Performance
+```env
+# Enable performance mode for additional logging and optimizations
+NEXT_PUBLIC_ENABLE_PERFORMANCE_MODE=true
+
+# Custom timeout configurations (optional)
+STREAM_TIMEOUT=30000
+AI_REQUEST_TIMEOUT=30000
+```
+
+### Performance Features
+- **Connection Pooling**: HTTP keep-alive for provider connections
+- **Request Retry Logic**: Configurable retry attempts with exponential backoff
+- **Memory Management**: Optimized message caching with size limits
+- **Concurrent Request Limiting**: Prevents overwhelming AI providers
+- **Performance Telemetry**: Optional monitoring and metrics collection
+
 ## License
 
 Apache License 2.0
